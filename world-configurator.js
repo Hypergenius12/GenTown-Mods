@@ -11,7 +11,7 @@ const $world_configurator_opts = {
         "100,60": "Itty bitty (.5x)",
     },
     continentSizes: {
-        "0.5": "Single continent (2x)",
+        "0.5": "Huge scale (2x)",
         "1": "Regular scale (1x)",
         "1.33": "More continents (0.75x)",
         "2": "Even more continents!! (0.5x)"
@@ -25,12 +25,11 @@ const $world_configurator_opts = {
 window.addEventListener("tools-initialized", load)
 
 if (userSettings.mods.some(s => s.endsWith("whirl-load.js"))) {
-    console.log("whirl-load.js found") // We can wait for the mod initialization event since it has to be there
-    if (window.whirlLoaderLoaded) { // If the loader is already loaded, we need to load ourselves
+    // We can wait for the mod initialization event since it has to be there
+    if (window.whirlLoaderLoaded) { // ...unless it's loaded in front of us, then we need to manually load
         load()
     }
 } else {
-    console.log("whirl-load.js not found, so force-loading it")
     addMod(WHIRLLOADER);
 }
 
@@ -56,14 +55,27 @@ function createGeneratedPerlinWithResizing(scale){
     return generatePerlinNoise
 }
 
+function redraw(){
+    resizeCanvases();
+    renderMap();
+    renderHighlight();
+    renderCursor();
+    updateStats();
+    updateCanvas(); 
+}
+
 function load(){
     if ($wt.modsLoaded.includes(MOD_NAME)){
         return;
     }
+    if (!userSettings.worldConfigurator__haveOpenedBefore){
+        userSettings.worldConfigurator__haveOpenedBefore = false;
+    }
+    saveSettings();
     $wt.modsLoaded.push(MOD_NAME);
     const btn = $wt.addExecutiveButton(
         false,
-        true,
+        userSettings.worldConfigurator__haveOpenedBefore,
         "World Configurator",
         "actionWorldConfigurator",
         document.querySelector('#actionMain').querySelector('div:not(#actionMainList)').firstElementChild
@@ -113,25 +125,26 @@ function load(){
             }
         ], "World Configurator")
     })
-    console.log("loading configurator");
-    console.log(userSettings);
-    console.log($wt);
-    console.log(generatePerlinNoise);
     generatePlanet = $wt.bindBefore(
         generatePlanet,
         () => {
             const regularWidth = 200;
             if (userSettings.worldConfigurator__resolution){
                 const [width, height] = userSettings.worldConfigurator__resolution.split(",");
-                $c.defaultPlanetWidth = +width;
-                $c.defaultPlanetHeight = +height;
+                planetWidth = +width;
+                planetHeight = +height;
+                $c.defaultPlanetWidth = width;
+                $c.defaultPlanetHeight = planetHeight;
             }  
             const csize = (+userSettings.worldConfigurator__continentSize || 1) * (1 / ($c.defaultPlanetWidth / regularWidth)); // We want to preserve the scale by default even at higher resolutions so we account for that
             generatePerlinNoise = createGeneratedPerlinWithResizing(csize);
             if (userSettings.worldConfigurator__chunkScale){
-                $c.defaultChunkSize = +userSettings.worldConfigurator__chunkScale;
+                chunkSize = +userSettings.worldConfigurator__chunkScale;
+                $c.defaultChunkSize = chunkSize;
             }
         }
     );
-    console.log(generatePerlinNoise);
+    window.addEventListener("load", (event) => {
+        redraw();
+    });
 }
