@@ -68,19 +68,20 @@ function load(){
     if ($wt.modsLoaded.includes(MOD_NAME)){
         return;
     }
-    if (!userSettings.worldConfigurator__haveOpenedBefore){
+    if (userSettings.worldConfigurator__haveOpenedBefore === undefined){
         userSettings.worldConfigurator__haveOpenedBefore = false;
     }
     saveSettings();
     $wt.modsLoaded.push(MOD_NAME);
     const btn = $wt.addExecutiveButton(
         false,
-        userSettings.worldConfigurator__haveOpenedBefore,
+        !userSettings.worldConfigurator__haveOpenedBefore,
         "World Configurator",
         "actionWorldConfigurator",
         document.querySelector('#actionMain').querySelector('div:not(#actionMainList)').firstElementChild
     )
     btn.addEventListener('click', () => {
+        userSettings.worldConfigurator__haveOpenedBefore = true;
         btn.classList.remove('notify')
         populateExecutive([
             {
