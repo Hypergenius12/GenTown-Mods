@@ -27,13 +27,17 @@ Mod.event("townTest", {
     message: (subject, target, args) => `Should residents of {{regname:town|${target.id}}} be ${args.value}?`,
     messageDone: (subject, target, args) => `{{regname:town|${target.id}}} are ${args.value}.`,
     messageNo: (subject, target, args) => `{{regname:town|${target.id}}} are not ${args.value}.`,
-    weight: $c.COMMON
+    weight: $c.COMMON,
+
+    // influences: {
+    //     "happy": 0.5
+    // }
 })
 
 // Daily Event
 Mod.event("townKill", {
     daily: true,
-    subject: { reg: "town", all: true },
+    target: { reg: "town", all: true },
     func: (subject, target, args) => {
         // Kills 10 people in every town each day.
         happen("Death", subject, target, { count: 10 });
