@@ -54,7 +54,7 @@ class ModContainer {
     }
 
     /**
-     * Fetches mod metadata from a URL. Assumes a fetch-compatible environment (like a browser or Deno).
+     * Fetches mod metadata from a URL.
      * @param {string} url The URL to the mods.json file.
      * @returns {Promise<void>}
      */
