@@ -1,11 +1,6 @@
 // Disasters.js
 // Comprehensive disasters mod
-// - tornado (EF scale), thunderstorm/blizzard (moving), sandstorm (desert-only, moving), tsunami (coastal strip),
-//   volcano (mountain-only), meteor, solar flare (jagged/long/less deadly), alien_laser (permanent), nuke (50 days).
-// - Adds settings option: Disaster spawn rate (Low/Normal/High/Extreme) -> userSettings.disasters_spawn_rate
-// - All storms (thunderstorm/blizzard/sandstorm) move daily using a master mover tick.
-// - Console helper: NaturalDisasters.spawn(type)
-// - Final load message: "Disasters mod enabled"
+// its in its beta so there will be bugs
 (function(){
   const MOD_ID = "Disasters_mod_v1";
   try { if (window.$wt && $wt.modsLoaded && $wt.modsLoaded.includes(MOD_ID)) return; } catch(e){}
@@ -856,3 +851,4 @@
 
   }); // end waitFor(actionables)
 })();
+
