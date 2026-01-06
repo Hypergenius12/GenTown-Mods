@@ -2,7 +2,7 @@
 
 
 (function(){
-  const MOD_ID = "Disasters";
+  const MOD_ID = "disasters";
   try { if (window.$wt && $wt.modsLoaded && $wt.modsLoaded.includes(MOD_ID)) return; } catch(e){}
   try { if (window.$wt && $wt.modsLoaded) $wt.modsLoaded.push(MOD_ID); } catch(e){}
 
@@ -1477,4 +1477,5 @@ if (proc.subtype === "solar_flare") {
   }
 
 })(); 
+
 
