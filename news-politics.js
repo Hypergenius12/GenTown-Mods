@@ -723,7 +723,7 @@
                 "spent the treasury budget on a solid gold bathtub that immediately sank.",
                 "was discovered taking critical policy advice from a magic 8-ball.",
                 "ordered the military to aggressively patrol the borders for invisible spies.",
-                "demanded the town well be filled entirely with sparkling fruit juice."
+                "demanded the town well be filled entirely with sparkling fruit juice.",
               "declared that all public speeches must now be delivered in falsetto",
     "mandated the construction of a monument dedicated to their favorite spoon",
     "outlawed the consumption of any food that is not perfectly spherical",
