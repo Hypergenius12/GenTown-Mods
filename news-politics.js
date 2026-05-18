@@ -370,7 +370,7 @@
         "started a business selling highly detailed, entirely inaccurate memories",
         "was caught trying to physically intimidate a highly fragile, entirely innocent thought",
         "claimed they invented a way to turn space into a highly valuable, entirely useless commodity",
-        "started a rumor that the town is secretly run by a highly organized shadow council of aggressively polite bakers"
+        "started a rumor that the town is secretly run by a highly organized shadow council of aggressively polite bakers",
             "discovered a new species of extremely loud frogs",
             "accidentally dyed the entire town's water supply purple for a day",
             "hosted a dinner party where only invisible food was served",
@@ -397,7 +397,7 @@
             "was seen arguing passionately with a wooden post",
             "invented a lantern that absorbs light instead of emitting it",
             "tried to pay their taxes using a sack of very angry bees",
-            "successfully taught a parrot how to critique modern art"
+            "successfully taught a parrot how to critique modern art",
       "accidentally painted their own shadow white",
     "started a band composed entirely of crickets",
     "tried to knit a scarf out of spun sugar",
@@ -723,7 +723,7 @@
                 "spent the treasury budget on a solid gold bathtub that immediately sank.",
                 "was discovered taking critical policy advice from a magic 8-ball.",
                 "ordered the military to aggressively patrol the borders for invisible spies.",
-                "demanded the town well be filled entirely with sparkling fruit juice."
+                "demanded the town well be filled entirely with sparkling fruit juice.",
               "declared that all public speeches must now be delivered in falsetto",
     "mandated the construction of a monument dedicated to their favorite spoon",
     "outlawed the consumption of any food that is not perfectly spherical",
