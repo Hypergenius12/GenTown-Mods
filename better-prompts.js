@@ -1,5 +1,5 @@
 (function initGenTownLinearMod() {
-  const PERCENT_STEPS =;
+  const PERCENT_STEPS = [0, 20, 40, 60, 80, 100];
 
   function deepSnapshot(obj, visited = new WeakSet()) {
     if (!obj || typeof obj !== 'object' || visited.has(obj)) return null;
