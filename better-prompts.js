@@ -1,131 +1,109 @@
-(function initGenTownLinearMod() {
-  const PERCENT_STEPS = [0, 20, 40, 60, 80, 100];
+// 注意：必須確保加載此檔案的 script 標籤帶有 type="module"，且 better_mod_loader.mjs 允許跨網域存取
+import { AbstractMod } from './better_mod_loader.mjs';
 
-  function deepSnapshot(obj, visited = new WeakSet()) {
-    if (!obj || typeof obj !== 'object' || visited.has(obj)) return null;
-    visited.add(obj);
-
-    const snap = {};
-    for (const key in obj) {
-      if (!Object.prototype.hasOwnProperty.call(obj, key)) continue;
-      const val = obj[key];
-      if (typeof val === 'number') {
-        snap[key] = val;
-      } else if (typeof val === 'object' && val !== null && !Array.isArray(val)) {
-        const subSnap = deepSnapshot(val, visited);
-        if (subSnap && Object.keys(subSnap).length > 0) snap[key] = subSnap;
-      }
-    }
-    return snap;
+export default class LinearPercentageChoicesMod extends AbstractMod {
+  constructor() {
+    super("linear_percentage_choices", "Linear Percentage Choices", 1, []);
   }
 
-  function applyDeepDelta(target, snap, factor) {
-    if (!target || !snap) return;
-    for (const key in snap) {
-      if (typeof snap[key] === 'number') {
-        const delta = target[key] - snap[key];
-        if (delta !== 0) {
-          // Enforce precision and trigger reactive setter properties if present
-          const newValue = snap[key] + (delta * factor);
-          target[key] = Number(newValue.toFixed(4)); 
+  initialize() {
+    const PERCENT_STEPS = [0, 20, 40, 60, 80, 100];
+    
+    const deepSnapshot = (obj, visited = new WeakSet()) => {
+      if (!obj || typeof obj !== 'object' || visited.has(obj)) return null;
+      visited.add(obj);
+      const snap = {};
+      for (const key in obj) {
+        if (!Object.prototype.hasOwnProperty.call(obj, key)) continue;
+        const val = obj[key];
+        if (typeof val === 'number') {
+          snap[key] = val;
+        } else if (typeof val === 'object' && val !== null && !Array.isArray(val)) {
+          const subSnap = deepSnapshot(val, visited);
+          if (subSnap && Object.keys(subSnap).length > 0) snap[key] = subSnap;
         }
-      } else if (typeof snap[key] === 'object' && target[key]) {
-        applyDeepDelta(target[key], snap[key], factor);
       }
-    }
-  }
-
-  function wrapEffect(originalEffect, factor) {
-    if (typeof originalEffect !== 'function') return originalEffect;
-
-    return function(...args) {
-      // Capture context target strings across runtime mutations
-      const stateTarget = (args[0] && typeof args[0] === 'object') ? args[0] : this;
-      
-      if (stateTarget && typeof stateTarget === 'object') {
-        const snapshot = deepSnapshot(stateTarget);
-        const result = originalEffect.apply(this, args);
-        applyDeepDelta(stateTarget, snapshot, factor);
-        return result;
-      }
-      return originalEffect.apply(this, args);
+      return snap;
     };
-  }
 
-  function expandChoiceLinear(baseChoice) {
-    if (!baseChoice) return [];
+    const applyDeepDelta = (target, snap, factor) => {
+      if (!target || !snap) return;
+      for (const key in snap) {
+        if (typeof snap[key] === 'number') {
+          const delta = target[key] - snap[key];
+          if (delta !== 0) {
+            target[key] = Number((snap[key] + (delta * factor)).toFixed(4));
+          }
+        } else if (typeof snap[key] === 'object' && target[key]) {
+          applyDeepDelta(target[key], snap[key], factor);
+        }
+      }
+    };
 
-    return PERCENT_STEPS.map((pct) => {
-      const factor = pct / 100;
-      const newChoice = Object.assign({}, baseChoice, {
-        text: `${baseChoice.text || 'Option'} (${pct}%)`,
-        scaleFactor: factor,
-        _isLinearStep: true
+    const wrapEffect = (originalEffect, factor) => {
+      if (typeof originalEffect !== 'function') return originalEffect;
+      return function(...args) {
+        const stateTarget = (args && typeof args[0] === 'object') ? args[0] : this;
+        if (stateTarget && typeof stateTarget === 'object') {
+          const snapshot = deepSnapshot(stateTarget);
+          const result = originalEffect.apply(this, args);
+          applyDeepDelta(stateTarget, snapshot, factor);
+          return result;
+        }
+        return originalEffect.apply(this, args);
+      };
+    };
+
+    const transformEventChoices = (eventObj) => {
+      if (!eventObj || !Array.isArray(eventObj.choices) || eventObj._linearProcessed) return;
+      eventObj._linearProcessed = true;
+
+      const expanded = [];
+      eventObj.choices.forEach((baseChoice) => {
+        PERCENT_STEPS.forEach((pct) => {
+          const factor = pct / 100;
+          const newChoice = Object.assign({}, baseChoice, {
+            text: `${baseChoice.text || 'Option'} (${pct}%)`,
+            scaleFactor: factor,
+            _isLinearStep: true
+          });
+
+          if (typeof baseChoice.cost === 'number') {
+            newChoice.cost = factor === 0 ? 0 : Math.max(1, Math.round(baseChoice.cost * factor));
+          } else if (typeof baseChoice.cost === 'object' && baseChoice.cost !== null) {
+            newChoice.cost = {};
+            for (const [res, val] of Object.entries(baseChoice.cost)) {
+              if (typeof val === 'number') {
+                newChoice.cost[res] = factor === 0 ? 0 : Math.max(1, Math.round(val * factor));
+              }
+            }
+          }
+
+          newChoice.effect = wrapEffect(baseChoice.effect, factor);
+          expanded.push(newChoice);
+        });
       });
 
-      // Maintain precision across resource structures
-      if (typeof baseChoice.cost === 'number') {
-        newChoice.cost = factor === 0 ? 0 : Math.max(1, Math.round(baseChoice.cost * factor));
-      } else if (typeof baseChoice.cost === 'object' && baseChoice.cost !== null) {
-        newChoice.cost = {};
-        for (const [res, val] of Object.entries(baseChoice.cost)) {
-          if (typeof val === 'number') {
-            newChoice.cost[res] = factor === 0 ? 0 : Math.max(1, Math.round(val * factor));
-          }
-        }
-      }
+      eventObj.choices = expanded;
+    };
 
-      newChoice.effect = wrapEffect(baseChoice.effect, factor);
-      return newChoice;
-    });
-  }
-
-  function processPrompt(promptData) {
-    if (!promptData || !Array.isArray(promptData.choices)) return;
-    if (!promptData._originalChoices) {
-      promptData._originalChoices = [...promptData.choices];
+    // inject the current events automatically
+    if (typeof events !== 'undefined' && events !== null) {
+      Object.keys(events).forEach((eventId) => transformEventChoices(events[eventId]));
     }
 
-    const expanded = [];
-    promptData._originalChoices.forEach((choice) => {
-      expanded.push(...expandChoiceLinear(choice));
-    });
-    promptData.choices = expanded;
-  }
-
-  function applyRuntimeScrollbar() {
-    // Dynamic universal modal tracking matching R74n components layout
-    const dialogs = document.querySelectorAll('dialog, [role="dialog"], #modal, .modal, .prompt');
-    dialogs.forEach((el) => {
-      const buttonContainer = el.querySelector('.choices, .buttons, div') || el;
-      if (buttonContainer && buttonContainer.children.length > 4) {
-        buttonContainer.style.maxHeight = '45vh';
-        buttonContainer.style.overflowY = 'auto';
-        buttonContainer.style.display = 'flex';
-        buttonContainer.style.flexDirection = 'column';
-        buttonContainer.style.gap = '6px';
-      }
-    });
-  }
-
-  function attachEngineHooks() {
     if (typeof window.showPrompt === 'function' && !window.showPrompt._isHooked) {
       const originalShowPrompt = window.showPrompt;
-
       window.showPrompt = function(promptData) {
-        processPrompt(promptData);
-        const result = originalShowPrompt.apply(this, arguments);
-        
-        applyRuntimeScrollbar();
-        setTimeout(applyRuntimeScrollbar, 50);
-        return result;
+        if (promptData && Array.isArray(promptData.choices)) {
+          transformEventChoices(promptData);
+        }
+        return originalShowPrompt.apply(this, arguments);
       };
-
       window.showPrompt._isHooked = true;
-    } else {
-      setTimeout(attachEngineHooks, 50);
     }
-  }
 
-  attachEngineHooks();
-})();
+    window.GenTownLinearChoices = { steps: PERCENT_STEPS, transform: transformEventChoices };
+    console.log("Linear Percentage Choices Mod loaded successfully.");
+  }
+}
