@@ -1,4 +1,3 @@
-// 注意：必須確保加載此檔案的 script 標籤帶有 type="module"，且 better_mod_loader.mjs 允許跨網域存取
 import { AbstractMod } from './better_mod_loader.mjs';
 
 export default class LinearPercentageChoicesMod extends AbstractMod {
