@@ -179,7 +179,7 @@ export class InterplanetaryExpansion extends AbstractMod {
                     if (marker.subtype === "spaceport") continue;
                     const x = marker.x;
                     const y = marker.y;
-                    const symbol = marker.symbol || "⏺";
+                    const symbol = marker.symbol || "";
                     let color = marker.color || [176, 176, 153];
                     if (x === undefined || y === undefined) continue;
 
@@ -307,7 +307,7 @@ export class InterplanetaryExpansion extends AbstractMod {
                 alienConfig.temp = Math.random() * 0.6 - 0.3;
                 alienConfig.moisture = Math.random() * 0.6 - 0.3;
                 alienConfig.elevation = Math.random() * 0.4 - 0.2;
-                alienConfig.biomeSize = randRange(25, 45);
+                alienConfig.biomeSize = randRange(50, 90);
                 alienConfig.landColor = Math.floor(Math.random() * 360);
                 alienConfig.waterColor = Math.floor(Math.random() * 360);
                 
@@ -327,8 +327,8 @@ export class InterplanetaryExpansion extends AbstractMod {
                 alien._biomes.water.plant = []; alien._biomes.water.animal = [];
                 alien._biomes.mountain.plant = []; alien._biomes.mountain.animal = [];
 
-                let pfx = ["Crysta","Magma","Toxic","Spore","Void"];
-                let numBiomes = randRange(3, 5);
+                let pfx = ["Crysta","Magma","Toxic","Spore","Void","Chrono","Geo","Pyro","Cryo","Litho","Silica","Acid","Rad","Neon","Umbra","Glimmer","Abyssal","Vortex","Ferro","Lumo","Strata","Ion","Stellar","Exo","Astro","Cosmo","Nova","Quantum","Dark","Light","Hyper","Null","Flux","Warp","Phase","Aether","Nebula","Prism","Ember","Frost","Ash","Dust","Gloom","Murk","Blight","Rust","Slag","Sludge","Ooze","Mire"];
+                let numBiomes = randRange(3, 6);
                 let selectedPfx = [];
                 while (selectedPfx.length < numBiomes) {
                     let p = choose(pfx);
@@ -446,101 +446,97 @@ export class InterplanetaryExpansion extends AbstractMod {
             window.updateCycleBtn();
         };
 
-        if (!window.oldOnNextDayMod) {
-            window.oldOnNextDayMod = onNextDay;
-            window.onNextDay = function() {
-                if (window.oldOnNextDayMod) window.oldOnNextDayMod();
-                
-                window.cachedPlanets.forEach(p => {
+        Mod.event("interplanetaryProcessManager", {
+            daily: true,
+            subject: { reg: "nature", id: 1 },
+            func: () => {
+                window.cachedPlanets.forEach((p, idx) => {
                     Object.values(p.reg.process).forEach(proc => {
-                        if (!isNaN(proc.id) && proc.type === "rocket_journey" && !proc.done && !proc.end) {
-                            proc.duration--;
-                            if (proc.duration === Math.floor(proc.totalDuration / 2)) {
-                                let launchTown = p.reg.town[proc.town];
-                                let targetBody = window.cachedPlanets[0].reg.body[proc.destination];
-                                let tName = launchTown ? launchTown.name : "Unknown";
-                                let bName = targetBody ? targetBody.name : "Unknown";
-                                logMessage(`The colony ship from ${tName} is halfway to ${bName}!`);
+                        if (!isNaN(proc.id) && !proc.done && !proc.end) {
+                            if (proc.type === "rocket_journey") {
+                                proc.duration--;
+                                if (proc.duration === Math.floor(proc.totalDuration / 2)) {
+                                    let launchTown = p.reg.town[proc.town];
+                                    let targetBody = window.cachedPlanets[0].reg.body[proc.destination];
+                                    let tName = launchTown ? launchTown.name : "Unknown";
+                                    let bName = targetBody ? targetBody.name : "Unknown";
+                                    logMessage(`The colony ship from ${tName} is halfway to ${bName}!`);
+                                }
+                                if (proc.duration <= 0) {
+                                    proc.done = p.day;
+                                    window.handleRocketArrival(proc, p);
+                                }
                             }
-                            if (proc.duration <= 0) {
-                                proc.done = p.day;
-                                window.handleRocketArrival(proc, p);
-                            }
-                        }
-
-                        if (!isNaN(proc.id) && proc.type === "transport_rocket" && !proc.done && !proc.end) {
-                            proc.duration--;
-                            if (proc.duration <= 0) {
-                                proc.done = p.day;
-                                let targetP = window.cachedPlanets.find(pl => pl.body === proc.destinationPlanet);
-                                if (targetP) {
-                                    let validTowns = Object.values(targetP.reg.town).filter(t => !t.end && !isNaN(t.pop));
-                                    if (validTowns.length > 0) {
-                                        let t2 = choose(validTowns);
-                                        let r1 = choose(["cash", "crop", "rock", "metal", "lumber"]);
-                                        let amt1 = Math.floor(Math.random() * 100) + 50;
-                                        if (!t2.resources) t2.resources = {};
-                                        t2.resources[r1] = (t2.resources[r1] || 0) + amt1;
-                                        
-                                        let launchTown = p.reg.town[proc.town];
-                                        if (launchTown) {
-                                            let r2 = choose(["cash", "crop", "rock", "metal", "lumber"]);
-                                            let amt2 = Math.floor(Math.random() * 100) + 50;
-                                            if (!launchTown.resources) launchTown.resources = {};
-                                            launchTown.resources[r2] = (launchTown.resources[r2] || 0) + amt2;
+                            else if (proc.type === "transport_rocket") {
+                                proc.duration--;
+                                if (proc.duration <= 0) {
+                                    proc.done = p.day;
+                                    let targetP = window.cachedPlanets.find(pl => pl.body === proc.destinationPlanet);
+                                    if (targetP) {
+                                        let validTowns = Object.values(targetP.reg.town).filter(t => !t.end && !isNaN(t.pop));
+                                        if (validTowns.length > 0) {
+                                            let t2 = choose(validTowns);
+                                            let r1 = choose(["cash", "crop", "rock", "metal", "lumber"]);
+                                            let amt1 = Math.floor(Math.random() * 100) + 50;
+                                            if (!t2.resources) t2.resources = {};
+                                            t2.resources[r1] = (t2.resources[r1] || 0) + amt1;
                                             
-                                            let prevActiveInside = window.activePlanetIndex;
-                                            window.activePlanetIndex = window.cachedPlanets.indexOf(p);
-                                            let tempP = planet;
-                                            let tempR = reg;
-                                            let tempB = window.biomes;
-                                            planet = p;
-                                            reg = p.reg;
-                                            window.biomes = p._biomes;
-                                            
-                                            logMessage(`Interplanetary transport arrived! ${launchTown.name} traded with ${t2.name} on ${targetP.name}.`);
-                                            
-                                            window.activePlanetIndex = prevActiveInside;
-                                            planet = tempP;
-                                            reg = tempR;
-                                            window.biomes = tempB;
+                                            let launchTown = p.reg.town[proc.town];
+                                            if (launchTown) {
+                                                let r2 = choose(["cash", "crop", "rock", "metal", "lumber"]);
+                                                let amt2 = Math.floor(Math.random() * 100) + 50;
+                                                if (!launchTown.resources) launchTown.resources = {};
+                                                launchTown.resources[r2] = (launchTown.resources[r2] || 0) + amt2;
+                                                
+                                                let prevActiveInside = window.activePlanetIndex;
+                                                window.activePlanetIndex = window.cachedPlanets.indexOf(p);
+                                                let tempP = planet;
+                                                let tempR = reg;
+                                                let tempB = window.biomes;
+                                                planet = p;
+                                                reg = p.reg;
+                                                window.biomes = p._biomes;
+                                                
+                                                logMessage(`Interplanetary transport arrived! ${launchTown.name} traded with ${t2.name} on ${targetP.name}.`);
+                                                
+                                                window.activePlanetIndex = prevActiveInside;
+                                                planet = tempP;
+                                                reg = tempR;
+                                                window.biomes = tempB;
+                                            }
                                         }
                                     }
                                 }
                             }
-                        }
-
-                        if (!isNaN(proc.id) && proc.type === "satellite_launch" && !proc.done && !proc.end) {
-                            proc.duration--;
-                            if (proc.duration <= 0) {
-                                proc.done = p.day;
-                                let launchTown = p.reg.town[proc.town];
-                                if (launchTown) {
-                                    let prevActiveInside = window.activePlanetIndex;
-                                    window.activePlanetIndex = window.cachedPlanets.indexOf(p);
-                                    let tempP = planet;
-                                    let tempR = reg;
-                                    let tempB = window.biomes;
-                                    planet = p;
-                                    reg = p.reg;
-                                    window.biomes = p._biomes;
-                                    
-                                    happen("Influence", null, launchTown, {education: 2, happy: 1});
-                                    logMessage(`Satellite from ${launchTown.name} successfully entered orbit!`);
-                                    
-                                    window.activePlanetIndex = prevActiveInside;
-                                    planet = tempP;
-                                    reg = tempR;
-                                    window.biomes = tempB;
+                            else if (proc.type === "satellite_launch") {
+                                proc.duration--;
+                                if (proc.duration <= 0) {
+                                    proc.done = p.day;
+                                    let launchTown = p.reg.town[proc.town];
+                                    if (launchTown) {
+                                        let prevActiveInside = window.activePlanetIndex;
+                                        window.activePlanetIndex = window.cachedPlanets.indexOf(p);
+                                        let tempP = planet;
+                                        let tempR = reg;
+                                        let tempB = window.biomes;
+                                        planet = p;
+                                        reg = p.reg;
+                                        window.biomes = p._biomes;
+                                        
+                                        happen("Influence", null, launchTown, {education: 2, happy: 1});
+                                        logMessage(`Satellite from ${launchTown.name} successfully entered orbit!`);
+                                        
+                                        window.activePlanetIndex = prevActiveInside;
+                                        planet = tempP;
+                                        reg = tempR;
+                                        window.biomes = tempB;
+                                    }
                                 }
                             }
                         }
                     });
-                });
 
-                let currentActive = window.activePlanetIndex;
-                window.cachedPlanets.forEach((p, idx) => {
-                    if (idx !== currentActive) {
+                    if (idx !== window.activePlanetIndex) {
                         let tempP = planet;
                         let tempR = reg;
                         let tempB = window.biomes;
@@ -567,8 +563,8 @@ export class InterplanetaryExpansion extends AbstractMod {
                         window.biomes = tempB;
                     }
                 });
-            };
-        }
+            }
+        });
 
         Mod.event("homePlanetAskName", {
             random: true,
@@ -712,11 +708,10 @@ export class InterplanetaryExpansion extends AbstractMod {
             subject: { reg: "nature", id: 1 },
             func: () => {
                 let hw = window.cachedPlanets[0];
+                let currentPlanet = window.cachedPlanets[window.activePlanetIndex];
                 let allSpaceports = [];
-                window.cachedPlanets.forEach(p => {
-                    Object.values(p.reg.marker).forEach(m => {
-                        if (!m.end && !isNaN(m.id) && m.subtype === "spaceport") allSpaceports.push({planet: p, marker: m});
-                    });
+                Object.values(currentPlanet.reg.marker).forEach(m => {
+                    if (!m.end && !isNaN(m.id) && m.subtype === "spaceport") allSpaceports.push({planet: currentPlanet, marker: m});
                 });
                 if (allSpaceports.length === 0) return;
                 
@@ -735,7 +730,7 @@ export class InterplanetaryExpansion extends AbstractMod {
                     let launchTown = launchPlanet.reg.town[chosen.marker.town];
                     if (!launchTown) return;
                     
-                    let bodies = Object.values(hw.reg.body).filter(b => b.type === "planet" && b.named !== false && !b.home);
+                    let bodies = Object.values(hw.reg.body).filter(b => b.type === "planet" && b.named !== false && !b.home && b.id !== launchPlanet.body);
                     if (!bodies.length) return;
                     let targetBody = choose(bodies);
                     
@@ -851,21 +846,22 @@ export class InterplanetaryExpansion extends AbstractMod {
         });
 
         Mod.event("homesickness", {
-    random: true,
-    subject: { reg: "town", random: true },
-    check: (subject, target, args) => planet._isAlien === true && subject && subject.influences && subject.influences.happy < 0,
-    message: (subject, target, args) => `Colonists in {{regname:town|${subject.id}}} are deeply homesick. Build a comms relay to the homeworld?`,
-    buttonYes: "Build",
-    func: (subject, target, args) => {
-        happen("Influence", null, subject, {happy: 3});
-        logMessage(`Comms relay built! Morale in {{regname:town|${subject.id}}} has skyrocketed.`);
-    },
-    buttonNo: "Ignore",
-    funcNo: (subject, target, args) => {
-        happen("Influence", null, subject, {happy: -2});
-    },
-    weight: 8
-});
+            random: true,
+            subject: { reg: "town", random: true },
+            check: (subject, target, args) => planet._isAlien === true && subject && subject.influences && subject.influences.happy < 0,
+            message: (subject, target, args) => `Colonists in {{regname:town|${subject.id}}} are deeply homesick. Build a comms relay to the homeworld?`,
+            buttonYes: "Build",
+            func: (subject, target, args) => {
+                happen("Influence", null, subject, {happy: 3});
+                logMessage(`Comms relay built! Morale in {{regname:town|${subject.id}}} has skyrocketed.`);
+            },
+            buttonNo: "Ignore",
+            funcNo: (subject, target, args) => {
+                happen("Influence", null, subject, {happy: -2});
+            },
+            weight: 8
+        });
+
         Mod.event("xenoDisease", {
             random: true,
             subject: { reg: "town", random: true },
