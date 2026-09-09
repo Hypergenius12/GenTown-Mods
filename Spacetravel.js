@@ -172,7 +172,7 @@ Mod.afterLoad(function() {
                 if (marker.subtype === "spaceport") continue;
                 const x = marker.x;
                 const y = marker.y;
-                const symbol = marker.symbol || "⏺";
+                const symbol = marker.symbol || "";
                 let color = marker.color || [176, 176, 153];
                 if (x === undefined || y === undefined) continue;
 
@@ -439,92 +439,91 @@ Mod.afterLoad(function() {
         window.updateCycleBtn();
     };
 
-    if (!window.oldOnNextDayMod) {
-        window.oldOnNextDayMod = onNextDay;
-        window.onNextDay = function() {
-            if (window.oldOnNextDayMod) window.oldOnNextDayMod();
-            
-            window.cachedPlanets.forEach(p => {
+    Mod.event("interplanetaryProcessManager", {
+        daily: true,
+        subject: { reg: "nature", id: 1 },
+        func: () => {
+            window.cachedPlanets.forEach((p, idx) => {
                 Object.values(p.reg.process).forEach(proc => {
-                    if (!isNaN(proc.id) && proc.type === "rocket_journey" && !proc.done && !proc.end) {
-                        proc.duration--;
-                        if (proc.duration === Math.floor(proc.totalDuration / 2)) {
-                            let launchTown = p.reg.town[proc.town];
-                            let targetBody = window.cachedPlanets[0].reg.body[proc.destination];
-                            let tName = launchTown ? launchTown.name : "Unknown";
-                            let bName = targetBody ? targetBody.name : "Unknown";
-                            logMessage(`The colony ship from ${tName} is halfway to ${bName}!`);
+                    if (!isNaN(proc.id) && !proc.done && !proc.end) {
+                        if (proc.type === "rocket_journey") {
+                            proc.duration--;
+                            if (proc.duration === Math.floor(proc.totalDuration / 2)) {
+                                let launchTown = p.reg.town[proc.town];
+                                let targetBody = window.cachedPlanets[0].reg.body[proc.destination];
+                                let tName = launchTown ? launchTown.name : "Unknown";
+                                let bName = targetBody ? targetBody.name : "Unknown";
+                                logMessage(`The colony ship from ${tName} is halfway to ${bName}!`);
+                            }
+                            if (proc.duration <= 0) {
+                                proc.done = p.day;
+                                window.handleRocketArrival(proc, p);
+                            }
                         }
-                        if (proc.duration <= 0) {
-                            proc.done = p.day;
-                            window.handleRocketArrival(proc, p);
-                        }
-                    }
-
-                    if (!isNaN(proc.id) && proc.type === "transport_rocket" && !proc.done && !proc.end) {
-                        proc.duration--;
-                        if (proc.duration <= 0) {
-                            proc.done = p.day;
-                            let targetP = window.cachedPlanets.find(pl => pl.body === proc.destinationPlanet);
-                            if (targetP) {
-                                let validTowns = Object.values(targetP.reg.town).filter(t => !t.end && !isNaN(t.pop));
-                                if (validTowns.length > 0) {
-                                    let t2 = choose(validTowns);
-                                    let r1 = choose(["cash", "crop", "rock", "metal", "lumber"]);
-                                    let amt1 = Math.floor(Math.random() * 100) + 50;
-                                    if (!t2.resources) t2.resources = {};
-                                    t2.resources[r1] = (t2.resources[r1] || 0) + amt1;
-                                    
-                                    let launchTown = p.reg.town[proc.town];
-                                    if (launchTown) {
-                                        let r2 = choose(["cash", "crop", "rock", "metal", "lumber"]);
-                                        let amt2 = Math.floor(Math.random() * 100) + 50;
-                                        if (!launchTown.resources) launchTown.resources = {};
-                                        launchTown.resources[r2] = (launchTown.resources[r2] || 0) + amt2;
+                        else if (proc.type === "transport_rocket") {
+                            proc.duration--;
+                            if (proc.duration <= 0) {
+                                proc.done = p.day;
+                                let targetP = window.cachedPlanets.find(pl => pl.body === proc.destinationPlanet);
+                                if (targetP) {
+                                    let validTowns = Object.values(targetP.reg.town).filter(t => !t.end && !isNaN(t.pop));
+                                    if (validTowns.length > 0) {
+                                        let t2 = choose(validTowns);
+                                        let r1 = choose(["cash", "crop", "rock", "metal", "lumber"]);
+                                        let amt1 = Math.floor(Math.random() * 100) + 50;
+                                        if (!t2.resources) t2.resources = {};
+                                        t2.resources[r1] = (t2.resources[r1] || 0) + amt1;
                                         
-                                        let prevActiveInside = window.activePlanetIndex;
-                                        window.activePlanetIndex = window.cachedPlanets.indexOf(p);
-                                        let tempP = planet;
-                                        let tempR = reg;
-                                        let tempB = window.biomes;
-                                        planet = p;
-                                        reg = p.reg;
-                                        window.biomes = p._biomes;
-                                        
-                                        logMessage(`Interplanetary transport arrived! ${launchTown.name} traded with ${t2.name} on ${targetP.name}.`);
-                                        
-                                        window.activePlanetIndex = prevActiveInside;
-                                        planet = tempP;
-                                        reg = tempR;
-                                        window.biomes = tempB;
+                                        let launchTown = p.reg.town[proc.town];
+                                        if (launchTown) {
+                                            let r2 = choose(["cash", "crop", "rock", "metal", "lumber"]);
+                                            let amt2 = Math.floor(Math.random() * 100) + 50;
+                                            if (!launchTown.resources) launchTown.resources = {};
+                                            launchTown.resources[r2] = (launchTown.resources[r2] || 0) + amt2;
+                                            
+                                            let prevActiveInside = window.activePlanetIndex;
+                                            window.activePlanetIndex = window.cachedPlanets.indexOf(p);
+                                            let tempP = planet;
+                                            let tempR = reg;
+                                            let tempB = window.biomes;
+                                            planet = p;
+                                            reg = p.reg;
+                                            window.biomes = p._biomes;
+                                            
+                                            logMessage(`Interplanetary transport arrived! ${launchTown.name} traded with ${t2.name} on ${targetP.name}.`);
+                                            
+                                            window.activePlanetIndex = prevActiveInside;
+                                            planet = tempP;
+                                            reg = tempR;
+                                            window.biomes = tempB;
+                                        }
                                     }
                                 }
                             }
                         }
-                    }
-
-                    if (!isNaN(proc.id) && proc.type === "satellite_launch" && !proc.done && !proc.end) {
-                        proc.duration--;
-                        if (proc.duration <= 0) {
-                            proc.done = p.day;
-                            let launchTown = p.reg.town[proc.town];
-                            if (launchTown) {
-                                let prevActiveInside = window.activePlanetIndex;
-                                window.activePlanetIndex = window.cachedPlanets.indexOf(p);
-                                let tempP = planet;
-                                let tempR = reg;
-                                let tempB = window.biomes;
-                                planet = p;
-                                reg = p.reg;
-                                window.biomes = p._biomes;
-                                
-                                happen("Influence", null, launchTown, {education: 2, happy: 1});
-                                logMessage(`Satellite from ${launchTown.name} successfully entered orbit!`);
-                                
-                                window.activePlanetIndex = prevActiveInside;
-                                planet = tempP;
-                                reg = tempR;
-                                window.biomes = tempB;
+                        else if (proc.type === "satellite_launch") {
+                            proc.duration--;
+                            if (proc.duration <= 0) {
+                                proc.done = p.day;
+                                let launchTown = p.reg.town[proc.town];
+                                if (launchTown) {
+                                    let prevActiveInside = window.activePlanetIndex;
+                                    window.activePlanetIndex = window.cachedPlanets.indexOf(p);
+                                    let tempP = planet;
+                                    let tempR = reg;
+                                    let tempB = window.biomes;
+                                    planet = p;
+                                    reg = p.reg;
+                                    window.biomes = p._biomes;
+                                    
+                                    happen("Influence", null, launchTown, {education: 2, happy: 1});
+                                    logMessage(`Satellite from ${launchTown.name} successfully entered orbit!`);
+                                    
+                                    window.activePlanetIndex = prevActiveInside;
+                                    planet = tempP;
+                                    reg = tempR;
+                                    window.biomes = tempB;
+                                }
                             }
                         }
                     }
@@ -557,8 +556,8 @@ Mod.afterLoad(function() {
                     window.biomes = tempB;
                 }
             });
-        };
-    }
+        }
+    });
 
     Mod.event("homePlanetAskName", {
         random: true,
