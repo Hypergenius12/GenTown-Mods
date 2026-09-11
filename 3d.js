@@ -1,31 +1,26 @@
-import { AbstractMod } from './better_mod_loader.mjs';
-
-export default class GenTown3DMod extends AbstractMod {
-    constructor() {
-        super("gentown_3d_engine", "3D Map Engine", 1, []);
-    }
-
-    initialize() {
-        let s1 = document.createElement("script");
-        s1.src = "https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js";
-        document.head.appendChild(s1);
-        s1.onload = () => {
-            let s2 = document.createElement("script");
-            s2.src = "https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js";
-            document.head.appendChild(s2);
-            s2.onload = () => {
-                if (typeof window.Mod !== "undefined" && window.Mod.afterLoad) {
-                    window.Mod.afterLoad(() => this.setup3DMap());
-                }
-                if (typeof window.planet !== "undefined" && window.planet.chunks) {
-                    this.setup3DMap();
-                }
+Mod.afterLoad(() => {
+    let s1 = document.createElement("script");
+    s1.src = "https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js";
+    document.head.appendChild(s1);
+    s1.onload = () => {
+        let s2 = document.createElement("script");
+        s2.src = "https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js";
+        document.head.appendChild(s2);
+        s2.onload = () => {
+            let origInitGame = window.initGame;
+            window.initGame = function() {
+                if (origInitGame) origInitGame.apply(this, arguments);
+                setup3DMap();
             };
-        };
-    }
 
-    setup3DMap() {
-        if (typeof window.planet === "undefined" || !window.planet.config) return;
+            if (typeof window.planet !== "undefined" && window.planet && window.planet.chunks) {
+                setup3DMap();
+            }
+        };
+    };
+
+    function setup3DMap() {
+        if (typeof window.planet === "undefined" || !window.planet || !window.planet.config || !window.THREE) return;
 
         const planet = window.planet;
         const THREE = window.THREE;
@@ -40,6 +35,8 @@ export default class GenTown3DMod extends AbstractMod {
 
         let mapDiv = document.getElementById("mapDiv");
         let mapCanvas = document.getElementById("mapCanvas");
+        if (!mapDiv || !mapCanvas) return;
+
         let existing = document.getElementById("webglCanvas");
         if (existing) existing.remove();
 
@@ -87,7 +84,7 @@ export default class GenTown3DMod extends AbstractMod {
         nCtx.putImageData(nData, 0, 0);
 
         let scene = new THREE.Scene();
-        let aspect = mapDiv.clientWidth / mapDiv.clientHeight;
+        let aspect = (mapDiv.clientWidth || W) / (mapDiv.clientHeight || H);
         let frustumSize = Math.max(W, H) * 1.15;
         
         let orthoCamera = new THREE.OrthographicCamera(frustumSize * aspect / -2, frustumSize * aspect / 2, frustumSize / 2, frustumSize / -2, -1000, 10000);
@@ -534,4 +531,4 @@ export default class GenTown3DMod extends AbstractMod {
         }
         anim();
     }
-}
+});
