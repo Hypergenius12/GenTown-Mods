@@ -1,10 +1,20 @@
 Mod.afterLoad(function() {
-    window.cachedPlanets = window.cachedPlanets || [planet];
+window.cachedPlanets = window.cachedPlanets || [];
     window.activePlanetIndex = window.activePlanetIndex || 0;
 
-    if (!planet._biomes) planet._biomes = JSON.parse(JSON.stringify(window.biomes));
+    window.ensurePlanetInit = () => {
+        if (!planet) return false;
+        if (!window.cachedPlanets.length || window.cachedPlanets[0] === null) {
+            window.cachedPlanets = [planet];
+        }
+        if (!planet._biomes) {
+            planet._biomes = JSON.parse(JSON.stringify(window.biomes || biomes));
+        }
+        return true;
+    };
 
-    window.applyPlanetColors = () => {
+window.applyPlanetColors = () => {
+        if (!window.ensurePlanetInit() || !planet.config) return;
         if (planet.config.landColor !== $c.defaultLandColor) {
             let hue = (planet.config.landColor - $c.defaultLandColor) / 360;
             for (let biome in window.biomes) {
@@ -439,10 +449,11 @@ Mod.afterLoad(function() {
         window.updateCycleBtn();
     };
 
-    Mod.event("interplanetaryProcessManager", {
+Mod.event("interplanetaryProcessManager", {
         daily: true,
         subject: { reg: "nature", id: 1 },
         func: () => {
+            if (!window.ensurePlanetInit()) return;
             window.cachedPlanets.forEach((p, idx) => {
                 Object.values(p.reg.process).forEach(proc => {
                     if (!isNaN(proc.id) && !proc.done && !proc.end) {
@@ -696,10 +707,11 @@ Mod.afterLoad(function() {
         weight: 3
     });
 
-    Mod.event("globalLaunchManager", {
+Mod.event("globalLaunchManager", {
         daily: true,
         subject: { reg: "nature", id: 1 },
         func: () => {
+            if (!window.ensurePlanetInit()) return;
             let hw = window.cachedPlanets[0];
             let currentPlanet = window.cachedPlanets[window.activePlanetIndex];
             let allSpaceports = [];
@@ -776,10 +788,11 @@ Mod.afterLoad(function() {
         }
     });
 
-    Mod.event("globalSpaceTrade", {
+Mod.event("globalSpaceTrade", {
         daily: true,
         subject: { reg: "nature", id: 1 },
         func: () => {
+            if (!window.ensurePlanetInit()) return;
             let validPlanets = window.cachedPlanets.filter(p => p.unlocks && p.unlocks.trade >= 40 && Object.values(p.reg.marker).some(m => !m.end && !isNaN(m.id) && m.subtype === "spaceport"));
             if (validPlanets.length < 2) return;
             
