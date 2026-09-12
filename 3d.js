@@ -1,4 +1,4 @@
-Mod.afterLoad(() => {
+Mod.afterLoad(function() {
     let s1 = document.createElement("script");
     s1.src = "https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js";
     document.head.appendChild(s1);
@@ -20,7 +20,7 @@ Mod.afterLoad(() => {
     };
 
     function setup3DMap() {
-        if (typeof window.planet === "undefined" || !window.planet || !window.planet.config || !window.THREE) return;
+        if (!window.planet || !window.planet.config || !window.THREE) return;
 
         const planet = window.planet;
         const THREE = window.THREE;
@@ -84,16 +84,21 @@ Mod.afterLoad(() => {
         nCtx.putImageData(nData, 0, 0);
 
         let scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x3ab0ff);
+        
         let aspect = (mapDiv.clientWidth || W) / (mapDiv.clientHeight || H);
         let frustumSize = Math.max(W, H) * 1.15;
         
+        scene.fog = new THREE.Fog(0x3ab0ff, frustumSize * 0.5, frustumSize * 2.5);
+
         let orthoCamera = new THREE.OrthographicCamera(frustumSize * aspect / -2, frustumSize * aspect / 2, frustumSize / 2, frustumSize / -2, -1000, 10000);
         orthoCamera.position.set(0, frustumSize, frustumSize * 0.6);
         let perspCamera = new THREE.PerspectiveCamera(45, aspect, 0.1, 10000);
         perspCamera.position.set(0, Math.max(W, H) * 0.85, H * 0.9);
 
         let activeCamera = orthoCamera;
-        let renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+        let renderer = new THREE.WebGLRenderer({ alpha: true, antialias: false });
+        renderer.setPixelRatio(window.devicePixelRatio);
         renderer.setSize(mapDiv.clientWidth, mapDiv.clientHeight);
         renderer.domElement.id = "webglCanvas";
         renderer.domElement.style.position = "absolute";
@@ -123,7 +128,6 @@ Mod.afterLoad(() => {
         let tex = new THREE.CanvasTexture(mCanvas);
         tex.minFilter = THREE.NearestFilter;
         tex.magFilter = THREE.NearestFilter;
-        if (THREE.sRGBEncoding) tex.encoding = THREE.sRGBEncoding;
 
         let geo = new THREE.PlaneGeometry(W, H, pw, ph);
         let pos = geo.attributes.position;
@@ -139,15 +143,16 @@ Mod.afterLoad(() => {
         geo.computeVertexNormals();
 
         let normTex = new THREE.CanvasTexture(nmCanvas);
-        normTex.minFilter = THREE.LinearFilter;
-        normTex.magFilter = THREE.LinearFilter;
+        normTex.minFilter = THREE.NearestFilter;
+        normTex.magFilter = THREE.NearestFilter;
 
         let mat = new THREE.MeshStandardMaterial({
             map: tex,
             normalMap: normTex,
             normalScale: new THREE.Vector2(1.5, 1.5),
             roughness: 0.9,
-            metalness: 0.05
+            metalness: 0.05,
+            flatShading: true
         });
 
         let mesh = new THREE.Mesh(geo, mat);
@@ -156,15 +161,42 @@ Mod.afterLoad(() => {
 
         let waterGeo = new THREE.PlaneGeometry(W, H, Math.floor(pw/2), Math.floor(ph/2));
         let waterMat = new THREE.MeshStandardMaterial({
-            color: 0x3a6ebd,
+            color: 0x4573d0,
             transparent: true,
             opacity: 0.70,
             roughness: 0.1,
-            metalness: 0.4
+            metalness: 0.2,
+            flatShading: true
         });
         let waterMesh = new THREE.Mesh(waterGeo, waterMat);
         waterMesh.rotation.x = -Math.PI / 2;
         scene.add(waterMesh);
+
+        let cloudGroup = new THREE.Group();
+        let cloudCount = Math.floor((pw * ph) / 300);
+        let cloudMat = new THREE.MeshStandardMaterial({
+            color: 0xffffff,
+            transparent: true,
+            opacity: 0.95,
+            roughness: 1,
+            flatShading: true
+        });
+        
+        for (let i = 0; i < cloudCount; i++) {
+            let cloud = new THREE.Group();
+            let puffs = Math.floor(Math.random() * 4) + 3;
+            for (let j = 0; j < puffs; j++) {
+                let s = W * 0.015 + Math.random() * W * 0.015;
+                let puffGeo = new THREE.BoxGeometry(s, s * 0.6, s);
+                let puff = new THREE.Mesh(puffGeo, cloudMat);
+                puff.position.set((Math.random() - 0.5) * W * 0.04, (Math.random() - 0.5) * W * 0.01, (Math.random() - 0.5) * W * 0.03);
+                cloud.add(puff);
+            }
+            cloud.position.set((Math.random() - 0.5) * W * 2.5, dispScale * 6.5 + Math.random() * dispScale * 1.5, (Math.random() - 0.5) * H * 2.5);
+            cloud.rotation.y = Math.random() * Math.PI;
+            cloudGroup.add(cloud);
+        }
+        scene.add(cloudGroup);
 
         let cursorGeo = new THREE.BoxGeometry(chunkSize * pz, 1, chunkSize * pz);
         cursorGeo.translate(0, 0.5, 0);
@@ -203,16 +235,24 @@ Mod.afterLoad(() => {
                 controls.maxZoom = 6;
                 controls.target.set(0, 0, 0);
             }
+
+            let cloudsOn = window.userSettings.g3d_clouds !== false && window.userSettings.g3d_clouds !== "false";
+            cloudGroup.visible = cloudsOn;
             
             let scale = (window.userSettings.g3d_scale !== undefined ? window.userSettings.g3d_scale : 100) / 100;
             mesh.scale.set(1, 1, dispScale * scale);
+            
+            let waterOp = window.userSettings.g3d_water !== undefined ? window.userSettings.g3d_water : 70;
+            waterMesh.material.opacity = waterOp / 100;
             waterMesh.position.y = dispScale * scale * planet.config.waterLevel;
         }
 
         function getExecutiveItems() {
             let enabled = window.userSettings.g3d_enabled !== false && window.userSettings.g3d_enabled !== "false";
             let ortho = window.userSettings.g3d_ortho !== false && window.userSettings.g3d_ortho !== "false";
+            let clouds = window.userSettings.g3d_clouds !== false && window.userSettings.g3d_clouds !== "false";
             let scale = window.userSettings.g3d_scale !== undefined ? window.userSettings.g3d_scale : 100;
+            let waterOp = window.userSettings.g3d_water !== undefined ? window.userSettings.g3d_water : 70;
             
             return [
                 {
@@ -235,8 +275,22 @@ Mod.afterLoad(() => {
                     }
                 },
                 {
+                    text: `Clouds: <span class='settingValue'>${clouds ? "ON" : "OFF"}</span>`,
+                    func: () => {
+                        window.userSettings.g3d_clouds = !clouds;
+                        window.saveSettings();
+                        sync3DState();
+                        openSettings(); 
+                    }
+                },
+                {
                     text: `Elevation Scale: <span class='settingValue'>${scale}%</span>`,
                     id: "g3d_scale_custom",
+                    func: () => {}
+                },
+                {
+                    text: `Water Opacity: <span class='settingValue'>${waterOp}%</span>`,
+                    id: "g3d_water_custom",
                     func: () => {}
                 }
             ];
@@ -247,52 +301,86 @@ Mod.afterLoad(() => {
             window.currentExecutive = "g3dmod";
 
             setTimeout(() => {
-                let slider = document.getElementById("actionItem-g3d_scale_custom");
-                if (slider) {
-                    slider.className = "actionItem item clickable actionSetting actionSlider";
-                    
-                    let min = 0, max = 300, step = 10;
-                    let updateGradient = (val) => {
-                        let percent = (val - min) / (max - min);
-                        slider.style.background = `linear-gradient(to right, rgba(255, 255, 255, 0.2) ${percent * 100}%, transparent ${percent * 100}%)`;
+                let slider1 = document.getElementById("actionItem-g3d_scale_custom");
+                if (slider1) {
+                    slider1.className = "actionItem item clickable actionSetting actionSlider";
+                    let min1 = 0, max1 = 300, step1 = 10;
+                    let updateGradient1 = (val) => {
+                        let percent = (val - min1) / (max1 - min1);
+                        slider1.style.background = `linear-gradient(to right, rgba(255, 255, 255, 0.2) ${percent * 100}%, transparent ${percent * 100}%)`;
                     };
-                    
                     let scaleVal = window.userSettings.g3d_scale !== undefined ? window.userSettings.g3d_scale : 100;
-                    updateGradient(scaleVal);
-
-                    let onDrag = (e) => {
-                        let rect = slider.getBoundingClientRect();
+                    updateGradient1(scaleVal);
+                    let onDrag1 = (e) => {
+                        let rect = slider1.getBoundingClientRect();
                         let clientX = e.touches ? e.touches[0].clientX : e.clientX;
                         let percent = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
-                        let val = Math.round((percent * (max - min) + min) / step) * step;
-                        
-                        slider.querySelector(".settingValue").innerText = val + "%";
-                        updateGradient(val);
+                        let val = Math.round((percent * (max1 - min1) + min1) / step1) * step1;
+                        slider1.querySelector(".settingValue").innerText = val + "%";
+                        updateGradient1(val);
                         window.userSettings.g3d_scale = val;
                         sync3DState();
                         syncSprites();
                     };
-
-                    let onUp = () => {
-                        window.removeEventListener("mousemove", onDrag);
-                        window.removeEventListener("mouseup", onUp);
-                        window.removeEventListener("touchmove", onDrag);
-                        window.removeEventListener("touchend", onUp);
+                    let onUp1 = () => {
+                        window.removeEventListener("mousemove", onDrag1);
+                        window.removeEventListener("mouseup", onUp1);
+                        window.removeEventListener("touchmove", onDrag1);
+                        window.removeEventListener("touchend", onUp1);
                         window.saveSettings();
                     };
-
-                    slider.addEventListener("mousedown", (e) => {
+                    slider1.addEventListener("mousedown", (e) => {
                         e.stopPropagation();
-                        onDrag(e);
-                        window.addEventListener("mousemove", onDrag);
-                        window.addEventListener("mouseup", onUp);
+                        onDrag1(e);
+                        window.addEventListener("mousemove", onDrag1);
+                        window.addEventListener("mouseup", onUp1);
                     });
-                    
-                    slider.addEventListener("touchstart", (e) => {
+                    slider1.addEventListener("touchstart", (e) => {
                         e.stopPropagation();
-                        onDrag(e);
-                        window.addEventListener("touchmove", onDrag);
-                        window.addEventListener("touchend", onUp);
+                        onDrag1(e);
+                        window.addEventListener("touchmove", onDrag1);
+                        window.addEventListener("touchend", onUp1);
+                    });
+                }
+
+                let slider2 = document.getElementById("actionItem-g3d_water_custom");
+                if (slider2) {
+                    slider2.className = "actionItem item clickable actionSetting actionSlider";
+                    let min2 = 0, max2 = 100, step2 = 5;
+                    let updateGradient2 = (val) => {
+                        let percent = (val - min2) / (max2 - min2);
+                        slider2.style.background = `linear-gradient(to right, rgba(255, 255, 255, 0.2) ${percent * 100}%, transparent ${percent * 100}%)`;
+                    };
+                    let waterVal = window.userSettings.g3d_water !== undefined ? window.userSettings.g3d_water : 70;
+                    updateGradient2(waterVal);
+                    let onDrag2 = (e) => {
+                        let rect = slider2.getBoundingClientRect();
+                        let clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                        let percent = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+                        let val = Math.round((percent * (max2 - min2) + min2) / step2) * step2;
+                        slider2.querySelector(".settingValue").innerText = val + "%";
+                        updateGradient2(val);
+                        window.userSettings.g3d_water = val;
+                        sync3DState();
+                    };
+                    let onUp2 = () => {
+                        window.removeEventListener("mousemove", onDrag2);
+                        window.removeEventListener("mouseup", onUp2);
+                        window.removeEventListener("touchmove", onDrag2);
+                        window.removeEventListener("touchend", onUp2);
+                        window.saveSettings();
+                    };
+                    slider2.addEventListener("mousedown", (e) => {
+                        e.stopPropagation();
+                        onDrag2(e);
+                        window.addEventListener("mousemove", onDrag2);
+                        window.addEventListener("mouseup", onUp2);
+                    });
+                    slider2.addEventListener("touchstart", (e) => {
+                        e.stopPropagation();
+                        onDrag2(e);
+                        window.addEventListener("touchmove", onDrag2);
+                        window.addEventListener("touchend", onUp2);
                     });
                 }
             }, 10);
@@ -350,6 +438,7 @@ Mod.afterLoad(() => {
         function syncSprites() {
             let activeIds = new Set();
             let scale = (window.userSettings.g3d_scale !== undefined ? window.userSettings.g3d_scale : 100) / 100;
+
             for(let key in window.planet.reg.marker) {
                 let m = window.planet.reg.marker[key];
                 if(isNaN(m) && !m.end && m.x !== undefined && m.y !== undefined) {
@@ -363,7 +452,7 @@ Mod.afterLoad(() => {
                     if(!spriteCache[id] || spriteCache[id].text !== sym || spriteCache[id].color !== fillColStr) {
                         if(spriteCache[id]) {
                             spriteGroup.remove(spriteCache[id].sprite);
-                            spriteCache[id].sprite.material.map.dispose();
+                            if(spriteCache[id].sprite.material.map) spriteCache[id].sprite.material.map.dispose();
                             spriteCache[id].sprite.material.dispose();
                         }
                         let sp = createTextSprite(sym, fillColStr, strokeColStr, "64px PublicPixel", true);
@@ -376,6 +465,7 @@ Mod.afterLoad(() => {
                     spriteCache[id].sprite.position.set(pixelX - W / 2, Math.max(e * dispScale * scale, waterMesh.position.y) + (W * 0.02), pixelY - H / 2);
                 }
             }
+
             for(let key in window.planet.reg.town) {
                 let t = window.planet.reg.town[key];
                 if(isNaN(t) && t.center && !t.end) {
@@ -391,7 +481,7 @@ Mod.afterLoad(() => {
                     if(!spriteCache[id] || spriteCache[id].text !== txt || spriteCache[id].color !== fillColStr) {
                         if(spriteCache[id]) {
                             spriteGroup.remove(spriteCache[id].sprite);
-                            spriteCache[id].sprite.material.map.dispose();
+                            if(spriteCache[id].sprite.material.map) spriteCache[id].sprite.material.map.dispose();
                             spriteCache[id].sprite.material.dispose();
                         }
                         let sp = createTextSprite(txt, fillColStr, strokeColStr, fontStr, false);
@@ -404,10 +494,11 @@ Mod.afterLoad(() => {
                     spriteCache[id].sprite.position.set(pixelX - W / 2, Math.max(e * dispScale * scale, waterMesh.position.y) + (W * 0.035), pixelY - H / 2);
                 }
             }
+
             for(let id in spriteCache) {
                 if(!activeIds.has(id)) {
                     spriteGroup.remove(spriteCache[id].sprite);
-                    spriteCache[id].sprite.material.map.dispose();
+                    if(spriteCache[id].sprite.material.map) spriteCache[id].sprite.material.map.dispose();
                     spriteCache[id].sprite.material.dispose();
                     delete spriteCache[id];
                 }
@@ -517,7 +608,7 @@ Mod.afterLoad(() => {
         function anim() {
             requestAnimationFrame(anim);
             if (window.userSettings.g3d_enabled !== false && window.userSettings.g3d_enabled !== "false") {
-                let time = Date.now() * 0.0008;
+                let time = Date.now() * 0.0004;
                 let pos = waterGeo.attributes.position;
                 for(let i=0; i<pos.count; i++) {
                     let px = pos.getX(i);
@@ -525,6 +616,12 @@ Mod.afterLoad(() => {
                     pos.setZ(i, Math.sin(px*0.05 + time) * Math.cos(py*0.05 + time) * (W*0.0015));
                 }
                 pos.needsUpdate = true;
+                
+                cloudGroup.children.forEach(c => {
+                    c.position.x += W * 0.0001;
+                    if (c.position.x > W * 1.25) c.position.x = -W * 1.25;
+                });
+
                 controls.update();
                 renderer.render(scene, activeCamera);
             }
