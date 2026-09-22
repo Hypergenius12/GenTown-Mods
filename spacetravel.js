@@ -92,34 +92,40 @@ window.applyPlanetColors = () => {
         }
     };
 
-    if (window.unlockTree && window.unlockTree.astronomy && window.unlockTree.astronomy.levels.length === 2) {
-        window.unlockTree.astronomy.levels.push({
-            level: 30,
-            name: "Aerospace",
-            message: "{{people}} look to the stars not just to observe, but to visit. {{should}}",
-            messageDone: "Aerospace engineering paves the way for orbital launches.",
-            influences: { education: 2 },
-            needsUnlock: { smith: 40 }
-        });
-        window.unlockTree.astronomy.levels.push({
-            level: 40,
-            name: "Deep Space Telemetry",
-            message: "Scientists want to establish advanced communication networks across the stars. {{should}}",
-            messageDone: "Deep space telemetry arrays now monitor planetary sectors.",
-            influences: { education: 2 },
-            needsUnlock: { astronomy: 30 }
-        });
+    if (window.unlockTree && window.unlockTree.astronomy) {
+        let hasAerospace = window.unlockTree.astronomy.levels.some(l => l.level === 30);
+        if (!hasAerospace) {
+            window.unlockTree.astronomy.levels.push({
+                level: 30,
+                name: "Aerospace",
+                message: "{{people}} look to the stars not just to observe, but to visit. {{should}}",
+                messageDone: "Aerospace engineering paves the way for orbital launches.",
+                influences: { education: 2 },
+                needsUnlock: { smith: 40 }
+            });
+            window.unlockTree.astronomy.levels.push({
+                level: 40,
+                name: "Deep Space Telemetry",
+                message: "Scientists want to establish advanced communication networks across the stars. {{should}}",
+                messageDone: "Deep space telemetry arrays now monitor planetary sectors.",
+                influences: { education: 2 },
+                needsUnlock: { astronomy: 30 }
+            });
+        }
     }
     
-    if (window.unlockTree && window.unlockTree.trade && window.unlockTree.trade.levels.length === 3) {
-        window.unlockTree.trade.levels.push({
-            level: 40,
-            name: "Interplanetary Trade",
-            message: "{{people}} want to establish logistics routes between planets. {{should}}",
-            messageDone: "Interplanetary freighters now transport goods across the void.",
-            influences: { trade: 2 },
-            needsUnlock: { astronomy: 30 }
-        });
+    if (window.unlockTree && window.unlockTree.trade) {
+        let hasInterplanetaryTrade = window.unlockTree.trade.levels.some(l => l.level === 40);
+        if (!hasInterplanetaryTrade) {
+            window.unlockTree.trade.levels.push({
+                level: 40,
+                name: "Interplanetary Trade",
+                message: "{{people}} want to establish logistics routes between planets. {{should}}",
+                messageDone: "Interplanetary freighters now transport goods across the void.",
+                influences: { trade: 2 },
+                needsUnlock: { astronomy: 30 }
+            });
+        }
     }
 
     actionables.process._projectSubtypes["spaceport"] = {
@@ -326,7 +332,10 @@ window.applyPlanetColors = () => {
             alien._isAlien = true;
             alien._logs = "";
             
-            alien._biomes = { water: JSON.parse(JSON.stringify(hw._biomes.water)), mountain: JSON.parse(JSON.stringify(hw._biomes.mountain)) };
+            alien._biomes = { 
+                water: JSON.parse(JSON.stringify(hw._biomes.water)), 
+                mountain: JSON.parse(JSON.stringify(hw._biomes.mountain)) 
+            };
             alien._biomes.water.plant = []; alien._biomes.water.animal = [];
             alien._biomes.mountain.plant = []; alien._biomes.mountain.animal = [];
 
@@ -610,8 +619,9 @@ Mod.event("interplanetaryProcessManager", {
             let chunk = randomChunk((c) => c.v.s === target.id);
             if (!chunk) return false;
             let choices = [];
-            if (window.biomes[chunk.b] && window.biomes[chunk.b].plant) choices = choices.concat(window.biomes[chunk.b].plant);
-            if (window.biomes[chunk.b] && window.biomes[chunk.b].animal) choices = choices.concat(window.biomes[chunk.b].animal);
+            let chunkBiome = window.biomes[chunk.b];
+            if (chunkBiome && chunkBiome.plant) choices = choices.concat(chunkBiome.plant);
+            if (chunkBiome && chunkBiome.animal) choices = choices.concat(chunkBiome.animal);
             if (chunk.e < planet.config.waterLevel + 1.5) {
                 if (window.biomes.water && window.biomes.water.plant) choices = choices.concat(window.biomes.water.plant);
                 if (window.biomes.water && window.biomes.water.animal) choices = choices.concat(window.biomes.water.animal);
